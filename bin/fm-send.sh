@@ -564,8 +564,28 @@ while :; do
       echo "error: duplicate --fire-and-forget" >&2
       exit 1
     }
-    FIRE_AND_FORGET_ID=${1#--fire-and-forget=}
+    FIRE_AND_FORGET_ID=${1#--fire-and-forget=}    shift
+    ;;
+  # An UNRECOGNISED --flag must fail here rather than falling through to text.
+  # This loop stops at the last flag, so a leading --token that no case above
+  # claimed is either a misspelled flag or a flag this script does not have; the
+  # shell would otherwise append it to the message body and deliver it verbatim.
+  # That failure is silent and expensive: a steer meant to carry a path or an
+  # option once arrived as the literal string "--file /tmp/x.txt" and the worker
+  # stalled on it with no error anywhere (SC-5851 feedback round, 2026-11-09).
+  # Message text that genuinely begins with "--" is still expressible by ending
+  # the flags with an explicit "--", per usual CLI convention.
+  --)
     shift
+    break
+    ;;
+  --key)
+    # Owned by the later --key path; leave it for that parser.
+    break
+    ;;
+  --?*)
+    echo "error: unrecognised flag '$1' for fm-send.sh (known: --resolve-key, --fire-and-forget, --key); to send text that begins with '--', precede it with an explicit '--'" >&2
+    exit 1
     ;;
   *) break ;;
   esac
